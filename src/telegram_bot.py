@@ -599,13 +599,20 @@ class TgBot(CoverBot):
             await status.edit_text(f'❌ {e}')
 
     async def on_audio_file(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Gửi kèm caption /cover hoặc /separate → xử lý file đính kèm."""
+        """File đính kèm: mặc định xử lý như /cover (trừ khi caption chỉ định /separate)."""
         caption = (update.message.caption or '').strip()
-        cmd = caption.split()[0].lower() if caption else ''
-        if cmd not in ('/cover', '/separate'):
-            return
-        kind = 'cover' if cmd == '/cover' else 'separate'
-        song, kv = self.parse_args(caption.split()[1:])
+        parts = caption.split()
+        cmd = parts[0].lower() if parts else ''
+        if cmd in ('/cover', '/separate'):
+            kind = 'cover' if cmd == '/cover' else 'separate'
+            rest = parts[1:]
+        elif cmd == '':
+            kind = 'cover'
+            rest = []
+        else:
+            kind = 'cover'
+            rest = parts
+        song, kv = self.parse_args(rest)
         overrides = {}
         if kind == 'cover' and kv.get('voice'):
             overrides['voice'] = kv['voice']
