@@ -178,3 +178,6 @@ uploads/
 downloads/
 .env
 cookies.txt
+
+# MDX models (downloaded by setup_venv.sh)
+mdxnet_models/

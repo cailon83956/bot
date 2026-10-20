@@ -18,6 +18,11 @@ if [ -n "$SP" ] && [ -d "$SP/nvidia" ]; then
   for d in "$SP"/nvidia/*/lib; do export LD_LIBRARY_PATH="$d:$LD_LIBRARY_PATH"; done
 fi
 
+# onnxruntime-gpu cần thư viện CUDA 12 (nếu cài qua pip nvidia-*-cu12) - tránh âm thầm rơi về CPU
+if [ -n "$SP" ] && [ -d "$SP/nvidia" ]; then
+  for d in "$SP"/nvidia/*/lib; do export LD_LIBRARY_PATH="$d:$LD_LIBRARY_PATH"; done
+fi
+
 # Tự khởi động lại nếu bot sập (nghỉ 10s)
 while true; do
   "$PY" src/telegram_bot.py "$@"
