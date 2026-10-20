@@ -359,12 +359,19 @@ class CoverBot:
         """Trả về (song_input, title, duration, thumbnail, cleanup_paths)."""
         import main as pipeline
         if file is not None:
-            fname = getattr(file, 'file_name', None) or 'audio'
+            fname = getattr(file, 'file_name', None) or getattr(file, 'file_unique_id', 'audio') or 'audio'
             ext = Path(fname).suffix.lower()
             if ext not in AUDIO_EXTS:
-                raise Exception('File đính kèm phải là âm thanh (mp3, wav, flac, m4a, ogg...).')
-            dest = UPLOAD_DIR / f'{uuid.uuid4().hex[:8]}_{safe_name(fname, 80) or ("audio" + ext)}'
-            await file.download_to_drive(custom_path=dest)
+                # voice messages / audio without extension → guess from mime or default .ogg
+                mime = getattr(file, 'mime_type', '') or ''
+                if 'ogg' in mime or getattr(file, 'duration', None) is not None and not ext:
+                    ext = '.ogg'
+                    fname = fname + ext
+                if Path(fname).suffix.lower() not in AUDIO_EXTS:
+                    raise Exception('File đính kèm phải là âm thanh (mp3, wav, flac, m4a, ogg...).')
+            dest = UPLOAD_DIR / f'{uuid.uuid4().hex[:8]}_{safe_name(Path(fname).stem, 80) or "audio"}{Path(fname).suffix.lower()}'
+            tg_file = await file.get_file() if hasattr(file, 'get_file') else file
+            await tg_file.download_to_drive(custom_path=dest)
             dur = await run_blocking(probe_duration, dest)
             return str(dest), Path(fname).stem, dur, None, [dest]
         if not song:
@@ -924,7 +931,8 @@ class TgBot(CoverBot):
         tmp = Path(tempfile.mkdtemp(prefix='up_'))
         try:
             dest = tmp / 'model.zip'
-            await update.message.document.download_to_drive(custom_path=dest)
+            tg_file = await update.message.document.get_file()
+            await tg_file.download_to_drive(custom_path=dest)
             pth, has_idx = await run_blocking(install_model, dest, name)
             await status.edit_text(f'✅ Đã cài model `{name}` ({pth}){"" if has_idx else " — ⚠️ không có file .index"}.')
         except Exception as e:
